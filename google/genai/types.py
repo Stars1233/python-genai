@@ -1916,9 +1916,17 @@ class FunctionDeclaration(_common.BaseModel):
       default=None,
       description="""Optional. Describes the parameters to this function in JSON Schema Object format. Reflects the Open API 3.03 Parameter Object. string Key: the name of the parameter. Parameter names are case sensitive. Schema Value: the Schema defining the type used for the parameter. For function with no parameters, this can be left unset. Parameter names must start with a letter or an underscore and must only contain chars a-z, A-Z, 0-9, or underscores with a maximum length of 64. Example with 1 required and 1 optional parameter: type: OBJECT properties: param1: type: STRING param2: type: INTEGER required: - param1""",
   )
+  parameters_json_schema: Optional[Any] = Field(
+      default=None,
+      description="""Optional. Describes the parameters to the function in JSON Schema format. The schema must describe an object where the properties are the parameters to the function. For example: ``` { "type": "object", "properties": { "name": { "type": "string" }, "age": { "type": "integer" } }, "additionalProperties": false, "required": ["name", "age"], "propertyOrdering": ["name", "age"] } ``` This field is mutually exclusive with `parameters`.""",
+  )
   response: Optional[Schema] = Field(
       default=None,
       description="""Optional. Describes the output from this function in JSON Schema format. Reflects the Open API 3.03 Response Object. The Schema defines the type used for the response value of the function.""",
+  )
+  response_json_schema: Optional[Any] = Field(
+      default=None,
+      description="""Optional. Describes the output from this function in JSON Schema format. The value specified by the schema is the response value of the function. This field is mutually exclusive with `response`.""",
   )
 
   @classmethod
@@ -2041,8 +2049,14 @@ class FunctionDeclarationDict(TypedDict, total=False):
   parameters: Optional[SchemaDict]
   """Optional. Describes the parameters to this function in JSON Schema Object format. Reflects the Open API 3.03 Parameter Object. string Key: the name of the parameter. Parameter names are case sensitive. Schema Value: the Schema defining the type used for the parameter. For function with no parameters, this can be left unset. Parameter names must start with a letter or an underscore and must only contain chars a-z, A-Z, 0-9, or underscores with a maximum length of 64. Example with 1 required and 1 optional parameter: type: OBJECT properties: param1: type: STRING param2: type: INTEGER required: - param1"""
 
+  parameters_json_schema: Optional[Any]
+  """Optional. Describes the parameters to the function in JSON Schema format. The schema must describe an object where the properties are the parameters to the function. For example: ``` { "type": "object", "properties": { "name": { "type": "string" }, "age": { "type": "integer" } }, "additionalProperties": false, "required": ["name", "age"], "propertyOrdering": ["name", "age"] } ``` This field is mutually exclusive with `parameters`."""
+
   response: Optional[SchemaDict]
   """Optional. Describes the output from this function in JSON Schema format. Reflects the Open API 3.03 Response Object. The Schema defines the type used for the response value of the function."""
+
+  response_json_schema: Optional[Any]
+  """Optional. Describes the output from this function in JSON Schema format. The value specified by the schema is the response value of the function. This field is mutually exclusive with `response`."""
 
 
 FunctionDeclarationOrDict = Union[FunctionDeclaration, FunctionDeclarationDict]
@@ -2375,6 +2389,42 @@ class UrlContextDict(TypedDict, total=False):
 UrlContextOrDict = Union[UrlContext, UrlContextDict]
 
 
+class VertexAISearchDataStoreSpec(_common.BaseModel):
+  """Define data stores within engine to filter on in a search call and configurations for those data stores.
+
+  For more information, see
+  https://cloud.google.com/generative-ai-app-builder/docs/reference/rpc/google.cloud.discoveryengine.v1#datastorespec
+  """
+
+  data_store: Optional[str] = Field(
+      default=None,
+      description="""Full resource name of DataStore, such as Format: `projects/{project}/locations/{location}/collections/{collection}/dataStores/{dataStore}`""",
+  )
+  filter: Optional[str] = Field(
+      default=None,
+      description="""Optional. Filter specification to filter documents in the data store specified by data_store field. For more information on filtering, see [Filtering](https://cloud.google.com/generative-ai-app-builder/docs/filter-search-metadata)""",
+  )
+
+
+class VertexAISearchDataStoreSpecDict(TypedDict, total=False):
+  """Define data stores within engine to filter on in a search call and configurations for those data stores.
+
+  For more information, see
+  https://cloud.google.com/generative-ai-app-builder/docs/reference/rpc/google.cloud.discoveryengine.v1#datastorespec
+  """
+
+  data_store: Optional[str]
+  """Full resource name of DataStore, such as Format: `projects/{project}/locations/{location}/collections/{collection}/dataStores/{dataStore}`"""
+
+  filter: Optional[str]
+  """Optional. Filter specification to filter documents in the data store specified by data_store field. For more information on filtering, see [Filtering](https://cloud.google.com/generative-ai-app-builder/docs/filter-search-metadata)"""
+
+
+VertexAISearchDataStoreSpecOrDict = Union[
+    VertexAISearchDataStoreSpec, VertexAISearchDataStoreSpecDict
+]
+
+
 class VertexAISearch(_common.BaseModel):
   """Retrieve from Vertex AI Search datastore or engine for grounding.
 
@@ -2382,6 +2432,10 @@ class VertexAISearch(_common.BaseModel):
   https://cloud.google.com/products/agent-builder
   """
 
+  data_store_specs: Optional[list[VertexAISearchDataStoreSpec]] = Field(
+      default=None,
+      description="""Specifications that define the specific DataStores to be searched, along with configurations for those data stores. This is only considered for Engines with multiple data stores. It should only be set if engine is used.""",
+  )
   datastore: Optional[str] = Field(
       default=None,
       description="""Optional. Fully-qualified Vertex AI Search data store resource ID. Format: `projects/{project}/locations/{location}/collections/{collection}/dataStores/{dataStore}`""",
@@ -2406,6 +2460,9 @@ class VertexAISearchDict(TypedDict, total=False):
   datastore and engine are mutually exclusive. See
   https://cloud.google.com/products/agent-builder
   """
+
+  data_store_specs: Optional[list[VertexAISearchDataStoreSpecDict]]
+  """Specifications that define the specific DataStores to be searched, along with configurations for those data stores. This is only considered for Engines with multiple data stores. It should only be set if engine is used."""
 
   datastore: Optional[str]
   """Optional. Fully-qualified Vertex AI Search data store resource ID. Format: `projects/{project}/locations/{location}/collections/{collection}/dataStores/{dataStore}`"""
@@ -2632,6 +2689,10 @@ class VertexRagStore(_common.BaseModel):
       default=None,
       description="""Optional. Number of top k results to return from the selected corpora.""",
   )
+  store_context: Optional[bool] = Field(
+      default=None,
+      description="""Optional. Currently only supported for Gemini Multimodal Live API. In Gemini Multimodal Live API, if `store_context` bool is specified, Gemini will leverage it to automatically memorize the interactions between the client and Gemini, and retrieve context when needed to augment the response generation for users' ongoing and future interactions.""",
+  )
   vector_distance_threshold: Optional[float] = Field(
       default=None,
       description="""Optional. Only return results with vector distance smaller than the threshold.""",
@@ -2652,6 +2713,9 @@ class VertexRagStoreDict(TypedDict, total=False):
 
   similarity_top_k: Optional[int]
   """Optional. Number of top k results to return from the selected corpora."""
+
+  store_context: Optional[bool]
+  """Optional. Currently only supported for Gemini Multimodal Live API. In Gemini Multimodal Live API, if `store_context` bool is specified, Gemini will leverage it to automatically memorize the interactions between the client and Gemini, and retrieve context when needed to augment the response generation for users' ongoing and future interactions."""
 
   vector_distance_threshold: Optional[float]
   """Optional. Only return results with vector distance smaller than the threshold."""
@@ -6655,6 +6719,10 @@ class GenerationConfig(_common.BaseModel):
       default=None,
       description="""Optional. The `Schema` object allows the definition of input and output data types. These types can be objects, but also primitives and arrays. Represents a select subset of an [OpenAPI 3.0 schema object](https://spec.openapis.org/oas/v3.0.3#schema). If set, a compatible response_mime_type must also be set. Compatible mimetypes: `application/json`: Schema for JSON response.""",
   )
+  response_json_schema: Optional[Any] = Field(
+      default=None,
+      description="""Optional. Output schema of the generated response. This is an alternative to `response_schema` that accepts [JSON Schema](https://json-schema.org/). If set, `response_schema` must be omitted, but `response_mime_type` is required. While the full JSON Schema may be sent, not all features are supported. Specifically, only the following properties are supported: - `$id` - `$defs` - `$ref` - `$anchor` - `type` - `format` - `title` - `description` - `enum` (for strings and numbers) - `items` - `prefixItems` - `minItems` - `maxItems` - `minimum` - `maximum` - `anyOf` - `oneOf` (interpreted the same as `anyOf`) - `properties` - `additionalProperties` - `required` The non-standard `propertyOrdering` property may also be set. Cyclic references are unrolled to a limited degree and, as such, may only be used within non-required properties. (Nullable properties are not sufficient.) If `$ref` is set on a sub-schema, no other properties, except for than those starting as a `$`, may be set.""",
+  )
   routing_config: Optional[GenerationConfigRoutingConfig] = Field(
       default=None, description="""Optional. Routing configuration."""
   )
@@ -6721,6 +6789,9 @@ class GenerationConfigDict(TypedDict, total=False):
 
   response_schema: Optional[SchemaDict]
   """Optional. The `Schema` object allows the definition of input and output data types. These types can be objects, but also primitives and arrays. Represents a select subset of an [OpenAPI 3.0 schema object](https://spec.openapis.org/oas/v3.0.3#schema). If set, a compatible response_mime_type must also be set. Compatible mimetypes: `application/json`: Schema for JSON response."""
+
+  response_json_schema: Optional[Any]
+  """Optional. Output schema of the generated response. This is an alternative to `response_schema` that accepts [JSON Schema](https://json-schema.org/). If set, `response_schema` must be omitted, but `response_mime_type` is required. While the full JSON Schema may be sent, not all features are supported. Specifically, only the following properties are supported: - `$id` - `$defs` - `$ref` - `$anchor` - `type` - `format` - `title` - `description` - `enum` (for strings and numbers) - `items` - `prefixItems` - `minItems` - `maxItems` - `minimum` - `maximum` - `anyOf` - `oneOf` (interpreted the same as `anyOf`) - `properties` - `additionalProperties` - `required` The non-standard `propertyOrdering` property may also be set. Cyclic references are unrolled to a limited degree and, as such, may only be used within non-required properties. (Nullable properties are not sufficient.) If `$ref` is set on a sub-schema, no other properties, except for than those starting as a `$`, may be set."""
 
   routing_config: Optional[GenerationConfigRoutingConfigDict]
   """Optional. Routing configuration."""
@@ -6967,152 +7038,6 @@ ComputeTokensResponseOrDict = Union[
 ]
 
 
-class GenerateVideosConfig(_common.BaseModel):
-  """Configuration for generating videos."""
-
-  http_options: Optional[HttpOptions] = Field(
-      default=None, description="""Used to override HTTP request options."""
-  )
-  number_of_videos: Optional[int] = Field(
-      default=None, description="""Number of output videos."""
-  )
-  output_gcs_uri: Optional[str] = Field(
-      default=None,
-      description="""The gcs bucket where to save the generated videos.""",
-  )
-  fps: Optional[int] = Field(
-      default=None, description="""Frames per second for video generation."""
-  )
-  duration_seconds: Optional[int] = Field(
-      default=None,
-      description="""Duration of the clip for video generation in seconds.""",
-  )
-  seed: Optional[int] = Field(
-      default=None,
-      description="""The RNG seed. If RNG seed is exactly same for each request with unchanged inputs, the prediction results will be consistent. Otherwise, a random RNG seed will be used each time to produce a different result.""",
-  )
-  aspect_ratio: Optional[str] = Field(
-      default=None,
-      description="""The aspect ratio for the generated video. 16:9 (landscape) and 9:16 (portrait) are supported.""",
-  )
-  resolution: Optional[str] = Field(
-      default=None,
-      description="""The resolution for the generated video. 1280x720, 1920x1080 are supported.""",
-  )
-  person_generation: Optional[str] = Field(
-      default=None,
-      description="""Whether allow to generate person videos, and restrict to specific ages. Supported values are: dont_allow, allow_adult.""",
-  )
-  pubsub_topic: Optional[str] = Field(
-      default=None,
-      description="""The pubsub topic where to publish the video generation progress.""",
-  )
-  negative_prompt: Optional[str] = Field(
-      default=None,
-      description="""Optional field in addition to the text content. Negative prompts can be explicitly stated here to help generate the video.""",
-  )
-  enhance_prompt: Optional[bool] = Field(
-      default=None, description="""Whether to use the prompt rewriting logic."""
-  )
-  generate_audio: Optional[bool] = Field(
-      default=None,
-      description="""Whether to generate audio along with the video.""",
-  )
-
-
-class GenerateVideosConfigDict(TypedDict, total=False):
-  """Configuration for generating videos."""
-
-  http_options: Optional[HttpOptionsDict]
-  """Used to override HTTP request options."""
-
-  number_of_videos: Optional[int]
-  """Number of output videos."""
-
-  output_gcs_uri: Optional[str]
-  """The gcs bucket where to save the generated videos."""
-
-  fps: Optional[int]
-  """Frames per second for video generation."""
-
-  duration_seconds: Optional[int]
-  """Duration of the clip for video generation in seconds."""
-
-  seed: Optional[int]
-  """The RNG seed. If RNG seed is exactly same for each request with unchanged inputs, the prediction results will be consistent. Otherwise, a random RNG seed will be used each time to produce a different result."""
-
-  aspect_ratio: Optional[str]
-  """The aspect ratio for the generated video. 16:9 (landscape) and 9:16 (portrait) are supported."""
-
-  resolution: Optional[str]
-  """The resolution for the generated video. 1280x720, 1920x1080 are supported."""
-
-  person_generation: Optional[str]
-  """Whether allow to generate person videos, and restrict to specific ages. Supported values are: dont_allow, allow_adult."""
-
-  pubsub_topic: Optional[str]
-  """The pubsub topic where to publish the video generation progress."""
-
-  negative_prompt: Optional[str]
-  """Optional field in addition to the text content. Negative prompts can be explicitly stated here to help generate the video."""
-
-  enhance_prompt: Optional[bool]
-  """Whether to use the prompt rewriting logic."""
-
-  generate_audio: Optional[bool]
-  """Whether to generate audio along with the video."""
-
-
-GenerateVideosConfigOrDict = Union[
-    GenerateVideosConfig, GenerateVideosConfigDict
-]
-
-
-class _GenerateVideosParameters(_common.BaseModel):
-  """Class that represents the parameters for generating an image."""
-
-  model: Optional[str] = Field(
-      default=None,
-      description="""ID of the model to use. For a list of models, see `Google models
-    <https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models>`_.""",
-  )
-  prompt: Optional[str] = Field(
-      default=None,
-      description="""The text prompt for generating the videos. Optional for image to video use cases.""",
-  )
-  image: Optional[Image] = Field(
-      default=None,
-      description="""The input image for generating the videos.
-      Optional if prompt is provided.""",
-  )
-  config: Optional[GenerateVideosConfig] = Field(
-      default=None, description="""Configuration for generating videos."""
-  )
-
-
-class _GenerateVideosParametersDict(TypedDict, total=False):
-  """Class that represents the parameters for generating an image."""
-
-  model: Optional[str]
-  """ID of the model to use. For a list of models, see `Google models
-    <https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models>`_."""
-
-  prompt: Optional[str]
-  """The text prompt for generating the videos. Optional for image to video use cases."""
-
-  image: Optional[ImageDict]
-  """The input image for generating the videos.
-      Optional if prompt is provided."""
-
-  config: Optional[GenerateVideosConfigDict]
-  """Configuration for generating videos."""
-
-
-_GenerateVideosParametersOrDict = Union[
-    _GenerateVideosParameters, _GenerateVideosParametersDict
-]
-
-
 class Video(_common.BaseModel):
   """A generated video."""
 
@@ -7125,6 +7050,30 @@ class Video(_common.BaseModel):
   mime_type: Optional[str] = Field(
       default=None, description="""Video encoding, for example "video/mp4"."""
   )
+
+  @classmethod
+  def from_file(
+      cls, *, location: str, mime_type: Optional[str] = None
+  ) -> 'Video':
+    """Loads a video from a local file.
+
+    Args:
+        location: The local path to load the video from.
+        mime_type: The MIME type of the video. If not provided, the MIME type
+          will be automatically determined.
+
+    Returns:
+        A loaded video as an `Video` object.
+    """
+    import mimetypes  # pylint: disable=g-import-not-at-top
+    import pathlib  # pylint: disable=g-import-not-at-top
+
+    video_bytes = pathlib.Path(location).read_bytes()
+
+    if not mime_type:
+      mime_type, _ = mimetypes.guess_type(location)
+    video = cls(video_bytes=video_bytes, mime_type=mime_type)
+    return video
 
   def save(
       self,
@@ -7190,6 +7139,168 @@ class VideoDict(TypedDict, total=False):
 
 
 VideoOrDict = Union[Video, VideoDict]
+
+
+class GenerateVideosConfig(_common.BaseModel):
+  """Configuration for generating videos."""
+
+  http_options: Optional[HttpOptions] = Field(
+      default=None, description="""Used to override HTTP request options."""
+  )
+  number_of_videos: Optional[int] = Field(
+      default=None, description="""Number of output videos."""
+  )
+  output_gcs_uri: Optional[str] = Field(
+      default=None,
+      description="""The gcs bucket where to save the generated videos.""",
+  )
+  fps: Optional[int] = Field(
+      default=None, description="""Frames per second for video generation."""
+  )
+  duration_seconds: Optional[int] = Field(
+      default=None,
+      description="""Duration of the clip for video generation in seconds.""",
+  )
+  seed: Optional[int] = Field(
+      default=None,
+      description="""The RNG seed. If RNG seed is exactly same for each request with unchanged inputs, the prediction results will be consistent. Otherwise, a random RNG seed will be used each time to produce a different result.""",
+  )
+  aspect_ratio: Optional[str] = Field(
+      default=None,
+      description="""The aspect ratio for the generated video. 16:9 (landscape) and 9:16 (portrait) are supported.""",
+  )
+  resolution: Optional[str] = Field(
+      default=None,
+      description="""The resolution for the generated video. 1280x720, 1920x1080 are supported.""",
+  )
+  person_generation: Optional[str] = Field(
+      default=None,
+      description="""Whether allow to generate person videos, and restrict to specific ages. Supported values are: dont_allow, allow_adult.""",
+  )
+  pubsub_topic: Optional[str] = Field(
+      default=None,
+      description="""The pubsub topic where to publish the video generation progress.""",
+  )
+  negative_prompt: Optional[str] = Field(
+      default=None,
+      description="""Optional field in addition to the text content. Negative prompts can be explicitly stated here to help generate the video.""",
+  )
+  enhance_prompt: Optional[bool] = Field(
+      default=None, description="""Whether to use the prompt rewriting logic."""
+  )
+  generate_audio: Optional[bool] = Field(
+      default=None,
+      description="""Whether to generate audio along with the video.""",
+  )
+  last_frame: Optional[Image] = Field(
+      default=None,
+      description="""Image to use as the last frame of generated videos. Only supported for image to video use cases.""",
+  )
+
+
+class GenerateVideosConfigDict(TypedDict, total=False):
+  """Configuration for generating videos."""
+
+  http_options: Optional[HttpOptionsDict]
+  """Used to override HTTP request options."""
+
+  number_of_videos: Optional[int]
+  """Number of output videos."""
+
+  output_gcs_uri: Optional[str]
+  """The gcs bucket where to save the generated videos."""
+
+  fps: Optional[int]
+  """Frames per second for video generation."""
+
+  duration_seconds: Optional[int]
+  """Duration of the clip for video generation in seconds."""
+
+  seed: Optional[int]
+  """The RNG seed. If RNG seed is exactly same for each request with unchanged inputs, the prediction results will be consistent. Otherwise, a random RNG seed will be used each time to produce a different result."""
+
+  aspect_ratio: Optional[str]
+  """The aspect ratio for the generated video. 16:9 (landscape) and 9:16 (portrait) are supported."""
+
+  resolution: Optional[str]
+  """The resolution for the generated video. 1280x720, 1920x1080 are supported."""
+
+  person_generation: Optional[str]
+  """Whether allow to generate person videos, and restrict to specific ages. Supported values are: dont_allow, allow_adult."""
+
+  pubsub_topic: Optional[str]
+  """The pubsub topic where to publish the video generation progress."""
+
+  negative_prompt: Optional[str]
+  """Optional field in addition to the text content. Negative prompts can be explicitly stated here to help generate the video."""
+
+  enhance_prompt: Optional[bool]
+  """Whether to use the prompt rewriting logic."""
+
+  generate_audio: Optional[bool]
+  """Whether to generate audio along with the video."""
+
+  last_frame: Optional[ImageDict]
+  """Image to use as the last frame of generated videos. Only supported for image to video use cases."""
+
+
+GenerateVideosConfigOrDict = Union[
+    GenerateVideosConfig, GenerateVideosConfigDict
+]
+
+
+class _GenerateVideosParameters(_common.BaseModel):
+  """Class that represents the parameters for generating videos."""
+
+  model: Optional[str] = Field(
+      default=None,
+      description="""ID of the model to use. For a list of models, see `Google models
+    <https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models>`_.""",
+  )
+  prompt: Optional[str] = Field(
+      default=None,
+      description="""The text prompt for generating the videos. Optional for image to video use cases.""",
+  )
+  image: Optional[Image] = Field(
+      default=None,
+      description="""The input image for generating the videos.
+      Optional if prompt or video is provided.""",
+  )
+  video: Optional[Video] = Field(
+      default=None,
+      description="""The input video for video extension use cases.
+      Optional if prompt or image is provided.""",
+  )
+  config: Optional[GenerateVideosConfig] = Field(
+      default=None, description="""Configuration for generating videos."""
+  )
+
+
+class _GenerateVideosParametersDict(TypedDict, total=False):
+  """Class that represents the parameters for generating videos."""
+
+  model: Optional[str]
+  """ID of the model to use. For a list of models, see `Google models
+    <https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models>`_."""
+
+  prompt: Optional[str]
+  """The text prompt for generating the videos. Optional for image to video use cases."""
+
+  image: Optional[ImageDict]
+  """The input image for generating the videos.
+      Optional if prompt or video is provided."""
+
+  video: Optional[VideoDict]
+  """The input video for video extension use cases.
+      Optional if prompt or image is provided."""
+
+  config: Optional[GenerateVideosConfigDict]
+  """Configuration for generating videos."""
+
+
+_GenerateVideosParametersOrDict = Union[
+    _GenerateVideosParameters, _GenerateVideosParametersDict
+]
 
 
 class GeneratedVideo(_common.BaseModel):

@@ -22,6 +22,7 @@ import os
 import pathlib
 from typing import Any, Optional, Union
 from urllib.parse import urlencode
+
 from . import _api_module
 from . import _common
 from . import _transformers as t
@@ -1152,15 +1153,18 @@ class AsyncFiles(_api_module.BaseModule):
     response = await self._create(
         file=file_obj, config=types.CreateFileConfig(http_options=http_options)
     )
-    if (
-        response.http_headers is None
-        or 'x-goog-upload-url' not in response.http_headers
+    if response.http_headers is None or (
+        'x-goog-upload-url' not in response.http_headers
+        and 'X-Goog-Upload-URL' not in response.http_headers
     ):
       raise KeyError(
           'Failed to create file. Upload URL did not returned from the create'
           ' file request.'
       )
-    upload_url = response.http_headers['x-goog-upload-url']
+    elif 'x-goog-upload-url' in response.http_headers:
+      upload_url = response.http_headers['x-goog-upload-url']
+    else:
+      upload_url = response.http_headers['X-Goog-Upload-URL']
 
     if isinstance(file, io.IOBase):
       return_file = await self._api_client.async_upload_file(

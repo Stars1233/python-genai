@@ -18,6 +18,7 @@
 import logging
 from typing import Any, AsyncIterator, Awaitable, Iterator, Optional, Union
 from urllib.parse import urlencode
+
 from . import _api_module
 from . import _common
 from . import _extra_utils
@@ -318,8 +319,22 @@ def _FunctionDeclaration_to_mldev(
   if getv(from_object, ['parameters']) is not None:
     setv(to_object, ['parameters'], getv(from_object, ['parameters']))
 
+  if getv(from_object, ['parameters_json_schema']) is not None:
+    setv(
+        to_object,
+        ['parametersJsonSchema'],
+        getv(from_object, ['parameters_json_schema']),
+    )
+
   if getv(from_object, ['response']) is not None:
     setv(to_object, ['response'], getv(from_object, ['response']))
+
+  if getv(from_object, ['response_json_schema']) is not None:
+    setv(
+        to_object,
+        ['responseJsonSchema'],
+        getv(from_object, ['response_json_schema']),
+    )
 
   return to_object
 
@@ -1364,6 +1379,28 @@ def _Image_to_mldev(
   return to_object
 
 
+def _Video_to_mldev(
+    api_client: BaseApiClient,
+    from_object: Union[dict[str, Any], object],
+    parent_object: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+  to_object: dict[str, Any] = {}
+  if getv(from_object, ['uri']) is not None:
+    setv(to_object, ['video', 'uri'], getv(from_object, ['uri']))
+
+  if getv(from_object, ['video_bytes']) is not None:
+    setv(
+        to_object,
+        ['video', 'encodedVideo'],
+        t.t_bytes(api_client, getv(from_object, ['video_bytes'])),
+    )
+
+  if getv(from_object, ['mime_type']) is not None:
+    setv(to_object, ['encoding'], getv(from_object, ['mime_type']))
+
+  return to_object
+
+
 def _GenerateVideosConfig_to_mldev(
     api_client: BaseApiClient,
     from_object: Union[dict[str, Any], object],
@@ -1431,6 +1468,9 @@ def _GenerateVideosConfig_to_mldev(
   if getv(from_object, ['generate_audio']) is not None:
     raise ValueError('generate_audio parameter is not supported in Gemini API.')
 
+  if getv(from_object, ['last_frame']) is not None:
+    raise ValueError('last_frame parameter is not supported in Gemini API.')
+
   return to_object
 
 
@@ -1456,6 +1496,9 @@ def _GenerateVideosParameters_to_mldev(
         ['instances[0]', 'image'],
         _Image_to_mldev(api_client, getv(from_object, ['image']), to_object),
     )
+
+  if getv(from_object, ['video']) is not None:
+    raise ValueError('video parameter is not supported in Gemini API.')
 
   if getv(from_object, ['config']) is not None:
     setv(
@@ -1758,8 +1801,22 @@ def _FunctionDeclaration_to_vertex(
   if getv(from_object, ['parameters']) is not None:
     setv(to_object, ['parameters'], getv(from_object, ['parameters']))
 
+  if getv(from_object, ['parameters_json_schema']) is not None:
+    setv(
+        to_object,
+        ['parametersJsonSchema'],
+        getv(from_object, ['parameters_json_schema']),
+    )
+
   if getv(from_object, ['response']) is not None:
     setv(to_object, ['response'], getv(from_object, ['response']))
+
+  if getv(from_object, ['response_json_schema']) is not None:
+    setv(
+        to_object,
+        ['responseJsonSchema'],
+        getv(from_object, ['response_json_schema']),
+    )
 
   return to_object
 
@@ -3233,6 +3290,28 @@ def _ComputeTokensParameters_to_vertex(
   return to_object
 
 
+def _Video_to_vertex(
+    api_client: BaseApiClient,
+    from_object: Union[dict[str, Any], object],
+    parent_object: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+  to_object: dict[str, Any] = {}
+  if getv(from_object, ['uri']) is not None:
+    setv(to_object, ['gcsUri'], getv(from_object, ['uri']))
+
+  if getv(from_object, ['video_bytes']) is not None:
+    setv(
+        to_object,
+        ['bytesBase64Encoded'],
+        t.t_bytes(api_client, getv(from_object, ['video_bytes'])),
+    )
+
+  if getv(from_object, ['mime_type']) is not None:
+    setv(to_object, ['mimeType'], getv(from_object, ['mime_type']))
+
+  return to_object
+
+
 def _GenerateVideosConfig_to_vertex(
     api_client: BaseApiClient,
     from_object: Union[dict[str, Any], object],
@@ -3316,6 +3395,15 @@ def _GenerateVideosConfig_to_vertex(
         getv(from_object, ['generate_audio']),
     )
 
+  if getv(from_object, ['last_frame']) is not None:
+    setv(
+        parent_object,
+        ['instances[0]', 'lastFrame'],
+        _Image_to_vertex(
+            api_client, getv(from_object, ['last_frame']), to_object
+        ),
+    )
+
   return to_object
 
 
@@ -3340,6 +3428,13 @@ def _GenerateVideosParameters_to_vertex(
         to_object,
         ['instances[0]', 'image'],
         _Image_to_vertex(api_client, getv(from_object, ['image']), to_object),
+    )
+
+  if getv(from_object, ['video']) is not None:
+    setv(
+        to_object,
+        ['instances[0]', 'video'],
+        _Video_to_vertex(api_client, getv(from_object, ['video']), to_object),
     )
 
   if getv(from_object, ['config']) is not None:
@@ -5797,13 +5892,26 @@ class Models(_api_module.BaseModule):
       model: str,
       prompt: Optional[str] = None,
       image: Optional[types.ImageOrDict] = None,
+      video: Optional[types.VideoOrDict] = None,
       config: Optional[types.GenerateVideosConfigOrDict] = None,
   ) -> types.GenerateVideosOperation:
-    """Generates videos based on a text description and configuration.
+    """Generates videos based on an input (text, image, or video) and configuration.
+
+    The following use cases are supported:
+    1. Text to video generation.
+    2a. Image to video generation (additional text prompt is optional).
+    2b. Image to video generation with frame interpolation (specify last_frame
+    in config).
+    3. Video extension (additional text prompt is optional)
 
     Args:
       model: The model to use.
-      instances: A list of prompts, images and videos to generate videos from.
+      prompt: The text prompt for generating the videos. Optional for image to
+        video use cases.
+      image: The input image for generating the videos. Optional if prompt is
+        provided.
+      video: The input video for video extension use cases. Optional if prompt
+        or image is provided.
       config: Configuration for generation.
 
     Usage:
@@ -5825,6 +5933,7 @@ class Models(_api_module.BaseModule):
         model=model,
         prompt=prompt,
         image=image,
+        video=video,
         config=config,
     )
 
@@ -7327,13 +7436,26 @@ class AsyncModels(_api_module.BaseModule):
       model: str,
       prompt: Optional[str] = None,
       image: Optional[types.ImageOrDict] = None,
+      video: Optional[types.VideoOrDict] = None,
       config: Optional[types.GenerateVideosConfigOrDict] = None,
   ) -> types.GenerateVideosOperation:
-    """Generates videos based on a text description and configuration.
+    """Generates videos based on an input (text, image, or video) and configuration.
+
+    The following use cases are supported:
+    1. Text to video generation.
+    2a. Image to video generation (additional text prompt is optional).
+    2b. Image to video generation with frame interpolation (specify last_frame
+    in config).
+    3. Video extension (additional text prompt is optional)
 
     Args:
       model: The model to use.
-      instances: A list of prompts, images and videos to generate videos from.
+      prompt: The text prompt for generating the videos. Optional for image to
+        video use cases.
+      image: The input image for generating the videos. Optional if prompt is
+        provided.
+      video: The input video for video extension use cases. Optional if prompt
+        or image is provided.
       config: Configuration for generation.
 
     Usage:
@@ -7355,6 +7477,7 @@ class AsyncModels(_api_module.BaseModule):
         model=model,
         prompt=prompt,
         image=image,
+        video=video,
         config=config,
     )
 
@@ -7663,8 +7786,10 @@ class AsyncModels(_api_module.BaseModule):
               or not chunk.candidates[0].content.parts
           ):
             break
-          func_response_parts = _extra_utils.get_function_response_parts(
-              chunk, function_map
+          func_response_parts = (
+              await _extra_utils.get_function_response_parts_async(
+                  chunk, function_map
+              )
           )
         if not function_map:
           break
