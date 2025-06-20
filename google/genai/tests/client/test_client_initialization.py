@@ -557,7 +557,9 @@ def test_vertexai_apikey_from_env_gemini_api_key_only(monkeypatch):
   assert isinstance(client.models._api_client, api_client.BaseApiClient)
 
 
-def test_vertexai_apikey_from_env_gemini_api_key_with_google_api_key_empty(monkeypatch):
+def test_vertexai_apikey_from_env_gemini_api_key_with_google_api_key_empty(
+    monkeypatch,
+):
   # Vertex AI Express mode uses API key on Vertex AI.
   api_key = "vertexai_api_key"
   monkeypatch.setenv("GEMINI_API_KEY", api_key)
@@ -578,7 +580,7 @@ def test_vertexai_apikey_from_env_gemini_api_key_with_google_api_key_empty(monke
   assert isinstance(client.models._api_client, api_client.BaseApiClient)
 
 
-def test_vertexai_apikey_from_env_both_api_keys(monkeypatch,  caplog):
+def test_vertexai_apikey_from_env_both_api_keys(monkeypatch, caplog):
   caplog.set_level(logging.DEBUG, logger="google_genai._api_client")
   # Vertex AI Express mode uses API key on Vertex AI.
   google_api_key = "google_api_key"
@@ -716,14 +718,23 @@ def test_client_logs_to_logger_instance(monkeypatch, caplog):
 
 
 def test_client_ssl_context_implicit_initialization():
-  client_args, async_client_args = api_client.BaseApiClient._ensure_ssl_ctx(
-      api_client.HttpOptions()
+  client_args, async_client_args = (
+      api_client.BaseApiClient._ensure_httpx_ssl_ctx(api_client.HttpOptions())
   )
 
   assert client_args["verify"]
-  assert async_client_args["verify"]
   assert isinstance(client_args["verify"], ssl.SSLContext)
-  assert isinstance(async_client_args["verify"], ssl.SSLContext)
+  try:
+    import aiohttp  # pylint: disable=g-import-not-at-top
+
+    async_client_args = api_client.BaseApiClient._ensure_aiohttp_ssl_ctx(
+        api_client.HttpOptions()
+    )
+    assert async_client_args["ssl"]
+    assert isinstance(async_client_args["ssl"], ssl.SSLContext)
+  except ImportError:
+    assert async_client_args["verify"]
+    assert isinstance(async_client_args["verify"], ssl.SSLContext)
 
 
 def test_client_ssl_context_explicit_initialization_same_args():
@@ -735,12 +746,22 @@ def test_client_ssl_context_explicit_initialization_same_args():
   options = api_client.HttpOptions(
       client_args={"verify": ctx}, async_client_args={"verify": ctx}
   )
-  client_args, async_client_args = api_client.BaseApiClient._ensure_ssl_ctx(
-      options
+  client_args, async_client_args = (
+      api_client.BaseApiClient._ensure_httpx_ssl_ctx(options)
   )
 
   assert client_args["verify"] == ctx
-  assert async_client_args["verify"] == ctx
+  try:
+    import aiohttp  # pylint: disable=g-import-not-at-top
+
+    async_client_args = api_client.BaseApiClient._ensure_aiohttp_ssl_ctx(
+        options
+    )
+    assert async_client_args["ssl"]
+    assert isinstance(async_client_args["ssl"], ssl.SSLContext)
+  except ImportError:
+    assert async_client_args["verify"]
+    assert isinstance(async_client_args["verify"], ssl.SSLContext)
 
 
 def test_client_ssl_context_explicit_initialization_separate_args():
@@ -757,12 +778,22 @@ def test_client_ssl_context_explicit_initialization_separate_args():
   options = api_client.HttpOptions(
       client_args={"verify": ctx}, async_client_args={"verify": async_ctx}
   )
-  client_args, async_client_args = api_client.BaseApiClient._ensure_ssl_ctx(
-      options
+  client_args, async_client_args = (
+      api_client.BaseApiClient._ensure_httpx_ssl_ctx(options)
   )
 
   assert client_args["verify"] == ctx
-  assert async_client_args["verify"] == async_ctx
+  try:
+    import aiohttp  # pylint: disable=g-import-not-at-top
+
+    async_client_args = api_client.BaseApiClient._ensure_aiohttp_ssl_ctx(
+        options
+    )
+    assert async_client_args["ssl"]
+    assert isinstance(async_client_args["ssl"], ssl.SSLContext)
+  except ImportError:
+    assert async_client_args["verify"]
+    assert isinstance(async_client_args["verify"], ssl.SSLContext)
 
 
 def test_client_ssl_context_explicit_initialization_sync_args():
@@ -772,12 +803,22 @@ def test_client_ssl_context_explicit_initialization_sync_args():
   )
 
   options = api_client.HttpOptions(client_args={"verify": ctx})
-  client_args, async_client_args = api_client.BaseApiClient._ensure_ssl_ctx(
-      options
+  client_args, async_client_args = (
+      api_client.BaseApiClient._ensure_httpx_ssl_ctx(options)
   )
 
   assert client_args["verify"] == ctx
-  assert async_client_args["verify"] == ctx
+  try:
+    import aiohttp  # pylint: disable=g-import-not-at-top
+
+    async_client_args = api_client.BaseApiClient._ensure_aiohttp_ssl_ctx(
+        options
+    )
+    assert async_client_args["ssl"]
+    assert isinstance(async_client_args["ssl"], ssl.SSLContext)
+  except ImportError:
+    assert async_client_args["verify"]
+    assert isinstance(async_client_args["verify"], ssl.SSLContext)
 
 
 def test_client_ssl_context_explicit_initialization_async_args():
@@ -787,12 +828,22 @@ def test_client_ssl_context_explicit_initialization_async_args():
   )
 
   options = api_client.HttpOptions(async_client_args={"verify": ctx})
-  client_args, async_client_args = api_client.BaseApiClient._ensure_ssl_ctx(
-      options
+  client_args, async_client_args = (
+      api_client.BaseApiClient._ensure_httpx_ssl_ctx(options)
   )
 
   assert client_args["verify"] == ctx
-  assert async_client_args["verify"] == ctx
+  try:
+    import aiohttp  # pylint: disable=g-import-not-at-top
+
+    async_client_args = api_client.BaseApiClient._ensure_aiohttp_ssl_ctx(
+        options
+    )
+    assert async_client_args["ssl"]
+    assert isinstance(async_client_args["ssl"], ssl.SSLContext)
+  except ImportError:
+    assert async_client_args["verify"]
+    assert isinstance(async_client_args["verify"], ssl.SSLContext)
 
 
 def test_constructor_with_base_url_from_http_options():
